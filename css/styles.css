@@ -1,0 +1,742 @@
+/*************  ✨ Windsurf Command 🌟  *************/
+#map,
+#photos,
+/* Shared layout */
+body {
+  margin: 0;
+  font-family: sans-serif;
+}
+
+/* Z-index stacking for record squares (newer on top) */
+.z-index-1 { z-index: 1; }
+.z-index-2 { z-index: 2; }
+.z-index-3 { z-index: 3; }
+.z-index-4 { z-index: 4; }
+.z-index-5 { z-index: 5; }
+.z-index-6 { z-index: 6; }
+
+nav {
+  background: #1e3a8a !important;
+  padding: 4px !important;
+  border-bottom: 1px solid #333 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 1000 !important;
+  width: 100% !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+/* Add padding to body to account for fixed nav */
+body {
+  margin: 0;
+  font-family: sans-serif;
+  padding-top: 30px !important;
+}
+
+nav a {
+  margin-right: 12px;
+  font-weight: bold;
+  text-decoration: none;
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+  font-size: 12px;
+}
+
+nav a:hover {
+  background: #2563eb;
+}
+
+/* Hide species navigation buttons by default */
+#speciesNavButtons {
+  display: none !important;
+}
+
+/* Show species navigation buttons only on Species Accounts page */
+body:has(#leafletViewer:not([style*="display: none"])) #speciesNavButtons {
+  display: flex !important;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+}
+
+#leafletViewer,
+#d3Viewer {
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+}
+
+#d3Viewer {
+  display: none; /* Hide D3 page by default */
+}
+
+h2 {
+  margin: 8px 0 12px;
+  font-size: 16px;
+}
+
+/* ===== Page 1 CSS (Leaflet + photos) ===== */
+html,
+body {
+  height: auto;
+}
+
+/* Three-column layout: controls left, map middle, photos/records right */
+#leafletViewer {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+}
+
+/* Left column: controls */
+#controls {
+  flex: 0 0 220px;
+  background: #fff;
+  padding: 8px;
+  border: 1px solid #333;
+}
+
+/* Map */
+#map {
+  flex: 0 0 400px;
+  height: 550px;
+  border: 1px solid #333;
+  background: #fff;
+  position: relative;
+}
+
+/* Photos and Records container side-by-side */
+#photos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #333;
+  padding: 0; /* Remove padding when in thumbnail view */
+  box-sizing: border-box;
+  position: relative;
+  height: 550px; /* Match map and records height */
+}
+
+#photos.thumbnail-view {
+  padding: 6px; /* Add padding back when not in thumbnail view */
+}
+
+/* Alternative: Apply padding when photos container has thumbnail-view class */
+div#photos.thumbnail-view {
+  padding: 6px;
+}
+
+/* Records container */
+#records {
+  height: 550px;
+  flex: 1;
+  background: #fff;
+  padding: 8px;
+  border: 1px solid #333;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+#records h3 {
+  margin-top: 0;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+#records-content {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Atlas Summary */
+#atlasSummary {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+#atlasSummary ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#atlasSummary li {
+  margin: 2px 0;
+}
+
+#photos:fullscreen {
+  max-width: 100vw;
+  max-height: 100vh;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.leaflet-popup-content {
+  font-size: 8px;
+  line-height: 1;
+}
+
+/* Dropdown */
+.dropdown-control select {
+  width: 180px;
+}
+
+/* Apply button */
+.apply-control button {
+  width: 180px;
+  font-weight: bold;
+  display: none; /* Hide the Apply button but keep functionality */
+}
+
+/* Year bins */
+.bins-control div {
+  display: flex;
+  align-items: center;
+  margin: 2px 0;
+}
+
+.bins-control .bin {
+  width: 60px;
+  padding: 2px 4px;
+  font-size: 12px;
+  border: 1px solid #333;
+  white-space: nowrap;
+}
+
+.bin-1930 {
+  background: #800080;
+  color: #fff;
+}
+
+.bin-30-69 {
+  background: #0000FF;
+  color: #fff;
+}
+
+.bin-70-86 {
+  background: #008000;
+  color: #fff;
+}
+
+.bin-87-99 {
+  background: #FFFF00;
+  color: #000;
+}
+
+.bin-00-19 {
+  background: #FFA500;
+  color: #000;
+}
+
+.bin-20plus {
+  background: #FF0000;
+  color: #fff;
+}
+
+/* Grid options */
+.grids-control div {
+  display: flex;
+  align-items: center;
+  margin: 2px 0;
+}
+
+/* Photo viewer */
+.viewer {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  border-top: none; /* Remove border when empty */
+}
+
+.viewer img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.viewer .photo-info {
+  position: absolute;
+  bottom: 5px;
+  right: 10px;
+  font-size: 14px;
+  color: black;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.thumbnails {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping */
+  gap: 4px;
+  padding: 4px;
+  overflow-y: scroll; /* Force scrollbar */
+  overflow-x: hidden;
+  width: 100%;
+  max-height: 550px; /* Increase height to use more container space */
+  background: #fff;
+  border-top: 1px solid #ccc;
+  box-sizing: border-box;
+  justify-content: center; /* Center thumbnails horizontally */
+  align-items: center; /* Center thumbnails vertically */
+}
+
+.thumbnails img {
+  height: 120px;
+  object-fit: cover;
+  cursor: pointer;
+  border: 1px solid #333;
+  flex: 0 0 auto; /* Let images set their own width */
+  max-width: 150px; /* Control individual image width */
+}
+
+#toggleThumbs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 2px;
+  padding: 4px;
+}
+
+#toggleThumbs span {
+  background: #000;
+  width: 100%;
+  height: 100%;
+}
+
+.photo-controls {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.photo-controls button,
+#fullscreenBtn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #333;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#fullscreenBtn svg {
+  width: 20px;
+  height: 20px;
+  fill: #000;
+}
+
+/* ===== Page 2 CSS (D3 atlas) ===== */
+.atlas-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr); /* 7 columns across */
+  gap: 15px;
+  padding: 20px;
+  width: 100%;
+}
+
+.species-container {
+  width: 100%;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.species-title-container {
+  margin-bottom: 4px;
+  overflow: hidden;
+  min-height: 52px; /* Ensure consistent height: 4 rows × 12px + 4px margin */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.species-title {
+  height: 30px;
+  line-height: 15px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 10px; /* Slightly smaller for 7-column layout */
+  margin-bottom: 4px;
+  overflow: hidden;
+}
+
+.species-family {
+  height: 12px;
+  line-height: 12px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 9px;
+  margin-bottom: 1px;
+  overflow: hidden;
+  color: #333;
+}
+
+.species-genus {
+  height: 12px;
+  line-height: 12px;
+  text-align: center;
+  font-size: 9px;
+  margin-bottom: 1px;
+  overflow: hidden;
+  color: #333;
+}
+
+.species-specific {
+  height: 12px;
+  line-height: 12px;
+  text-align: center;
+  font-size: 9px;
+  margin-bottom: 1px;
+  overflow: hidden;
+  color: #333;
+}
+
+.species-english {
+  height: 12px;
+  line-height: 12px;
+  text-align: center;
+  font-size: 8px;
+  font-style: italic;
+  margin-bottom: 1px;
+  overflow: hidden;
+  color: #666;
+}
+
+.spacer-container {
+  opacity: 0.3;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+}
+
+.spacer-container svg {
+  background: #f9f9f9;
+}
+
+rect.gridcell {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.25);
+  stroke-width: 0.5;
+  shape-rendering: crispEdges;
+}
+
+text.axislabel {
+  font-size: 10px;
+  fill: black;
+  stroke: none;
+}
+
+.species-family {
+  font-weight: bold;
+  font-size: 12px;
+  text-align: left;
+}
+
+.species-genus {
+  font-size: 11px;
+  text-align: left;
+}
+
+.species-specific {
+  font-size: 11px;
+  text-align: left;
+}
+
+.species-english {
+  font-size: 11px;
+  font-style: italic;
+  text-align: left;
+}
+
+.species-status {
+  font-size: 11px;
+  text-align: left;
+  margin-bottom: 4px;
+}
+
+#atlas {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+
+/* Summary Table Styling */
+#summaryTable {
+  border: none !important;
+  border-collapse: collapse !important;
+  background: white !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+  overflow: hidden !important;
+}
+
+#summaryTable th {
+  background: white !important; /* Remove gray background */
+  font-weight: bold !important;
+  border: none !important; /* Remove all borders */
+  border-bottom: 2px solid #000 !important; /* Keep only bottom border */
+  font-size: 12px !important; /* Match tickbox font size */
+}
+
+#summaryTable th:nth-child(1) {
+  width: 80px !important; /* Years column - smaller */
+  padding: 4px 6px !important; /* Reduce padding */
+}
+
+#summaryTable th:nth-child(2) {
+  width: 25px !important; /* Color column - very small */
+  padding: 4px 2px !important; /* Minimal padding */
+}
+
+#summaryTable th:nth-child(3) {
+  width: 80px !important; /* Unique Squares column - smaller */
+  padding: 4px 6px !important; /* Reduce padding */
+}
+
+#summaryTable td {
+  border: none !important; /* Remove all borders */
+  padding: 8px 12px !important;
+  text-align: center !important;
+  font-size: 12px !important; /* Match tickbox font size */
+}
+
+#summaryTable td:nth-child(1) {
+  width: 90px !important; /* Years column - smaller */
+  padding: 4px 6px !important; /* Reduce padding */
+}
+
+#summaryTable td:nth-child(2) {
+  width: 25px !important; /* Color column - very small */
+  padding: 4px 2px !important; /* Minimal padding */
+}
+
+#summaryTable td:nth-child(3) {
+  width: 80px !important; /* Unique Squares column - smaller */
+  padding: 4px 6px !important; /* Reduce padding */
+}
+
+/* Hide only cells with zero-value class in column 3 */
+#summaryTable td:nth-child(3).zero-value {
+  color: white !important;
+}
+
+#summaryTable td:nth-child(3):empty {
+  color: white !important; /* Hide completely empty cells */
+}
+
+#summaryTable tr:last-child td {
+  border-bottom: none !important;
+}
+
+#summaryTable tr:hover {
+  background: #f5f5f5 !important;
+}
+
+/* Hide Leaflet attribution label */
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+/* Style for custom map controls */
+.custom-map-controls {
+  display: flex !important;
+  gap: 2px !important;
+}
+
+.map-control-btn {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 4px !important;
+  background: white !important;
+  border: 1px solid #ccc !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.map-control-btn:hover {
+  background: #f0f0f0 !important;
+}
+
+#atlasSummary {
+  margin: 8px 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+/* =========================
+   Photos Gallery Styles
+   ========================= */
+
+.photos-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 15px;
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.photo-species-container {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.photo-species-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.photo-title-container {
+  padding: 8px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+}
+
+.photo-family {
+  font-size: 10px;
+  font-weight: bold;
+  color: #666;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.photo-genus {
+  font-size: 11px;
+  font-weight: bold;
+  color: #333;
+  font-style: italic;
+  margin-bottom: 2px;
+}
+
+.photo-specific {
+  font-size: 11px;
+  color: #333;
+  font-style: italic;
+  margin-bottom: 2px;
+}
+
+.photo-english {
+  font-size: 12px;
+  color: #555;
+  font-weight: 500;
+}
+
+.photo-image-container {
+  width: 100%;
+  height: 160px; /* Increased from 120px to 160px */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ccc;
+  background: #f9f9f9;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.photos-grid .species-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover !important;
+  cursor: default;
+  transition: none;
+}
+
+.species-photo:hover {
+  transform: none;
+}
+
+.photo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  font-size: 10px;
+  color: #999;
+  background: #f5f5f5;
+}
+
+/* Lightbox Styles */
+.photo-lightbox {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox-content {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+  text-align: center;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 20px;
+  right: 35px;
+  color: #f1f1f1;
+  font-size: 40px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 1001;
+}
+
+.lightbox-close:hover {
+  color: #bbb;
+}
+
+.lightbox-image {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.lightbox-caption {
+  color: #f1f1f1;
+  font-size: 16px;
+  margin-top: 15px;
+  text-align: center;
+}
+
+/*******  f8f59b8d-997a-46ae-aea9-88a8faa2db69  *******/
