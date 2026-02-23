@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8" />
+
+  <title>Arnside & Silverdale National Landscape Flora Atlas</title>
+
+  <!-- Password protection check -->
+  <script>
+    // Check for password access
+    if (sessionStorage.getItem('atlasAccess') !== 'granted') {
+      window.location.href = 'password-gate.html';
+    }
+  </script>
+
+  <!-- ===== External libraries MUST load before our JS ===== -->
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+
+
+  <!-- Main stylesheet -->
+
+  <link rel="stylesheet" href="css/styles.css" />
+
+
+
+</head>
+
+
+
+<body>
+
+
+
+  <!-- Navigation -->
+
+  <div include-html="components/nav.html"></div>
+
+
+
+  <div id="app">
+
+
+
+    <!-- Page 1: Leaflet viewer -->
+
+    <div include-html="components/leaflet.html"></div>
+
+
+
+    <!-- Page 2: D3 atlas -->
+
+    <div include-html="components/d3.html"></div>
+
+
+
+    <!-- Page 3: All photos -->
+
+    <div include-html="components/photos.html"></div>
+
+    <!-- Page 4: Species Gallery -->
+
+    <div include-html="components/gallery.html"></div>
+
+
+
+  </div>
+
+
+
+  <!-- Footer -->
+
+  <div include-html="components/footer.html"></div>
+
+
+
+  <!-- ===== Component Loader (Step 2) ===== -->
+
+  <script>
+
+  document.addEventListener("DOMContentLoaded", () => {
+
+    const includes = document.querySelectorAll("[include-html]");
+
+    let remaining = includes.length;
+
+
+
+    includes.forEach(el => {
+
+      const file = el.getAttribute("include-html");
+
+      fetch(file)
+
+        .then(resp => resp.text())
+
+        .then(html => {
+
+          el.innerHTML = html;
+
+          remaining--;
+
+
+
+          // When ALL components are loaded, run JS initialisers
+
+          if (remaining === 0) {
+
+            // console.log("All components loaded — running initialisers");
+
+
+
+            // Initialize page display
+
+            if (typeof showLeafletPage === "function") showLeafletPage();
+
+
+
+            // Add navigation click handlers
+
+            const navLinks = document.querySelectorAll('nav a');
+
+            navLinks[0].addEventListener('click', showLeafletPage);
+
+            navLinks[1].addEventListener('click', showD3Page);
+
+            navLinks[2].addEventListener('click', showPhotosPage);
+
+            navLinks[3].addEventListener('click', showStatisticsPage);
+
+
+
+            if (typeof initShared === "function") initShared();
+
+            if (typeof initLeaflet === "function") initLeaflet();
+
+            if (typeof initD3 === "function") initD3();
+
+            if (typeof initPhotos === "function") initPhotos();
+
+            // Add event listeners with proper cleanup
+            setTimeout(() => {
+              // Remove all existing listeners first
+              const latinSelect = document.getElementById("latinSelect");
+              if (latinSelect) {
+                const newLatinSelect = latinSelect.cloneNode(true);
+                latinSelect.parentNode.replaceChild(newLatinSelect, latinSelect);
+                
+                newLatinSelect.addEventListener("change", () => {
+                  // console.log("Species selected - updating everything including photos and summary table");
+                  const speciesName = newLatinSelect.value;
+                  
+                  // Update species info container
+                  const speciesInfoContent = document.getElementById("species-info-content");
+                  if (speciesInfoContent) {
+                    if (speciesName && speciesName !== "Select") {
+                      // Get English name from metadata
+                      const metadata = metadataLookup.get(speciesName);
+                      const englishName = metadata ? metadata.english : '';
+                      
+                      // Display both Latin and English names
+                      if (englishName) {
+                        speciesInfoContent.innerHTML = `<strong>${speciesName}</strong> - ${englishName}`;
+                      } else {
+                        speciesInfoContent.innerHTML = `<strong>${speciesName}</strong>`;
+                      }
+                    } else {
+                      speciesInfoContent.innerHTML = "Select a species to view information";
+                    }
+                  }
+                  
+                  // Clear summary table before updating to prevent duplicates
+                  const summaryBody = document.querySelector("#summaryTable tbody");
+                  if (summaryBody) summaryBody.innerHTML = "";
+                  
+                  // Update everything when species is selected
+                  updateCarousel(speciesName);  // Update photos
+                  drawFiltered();              // Update records
+                  drawD3Atlas(speciesName);     // Update D3 atlas
+                  if (window.drawPhenologyChart) {
+                    window.drawPhenologyChart(speciesName); // Update phenology chart
+                  }
+                  const activeGrids = getCheckedValues(".grids-control");
+                  drawGridOverlay(activeGrids); // Update grid overlay
+                  
+                  // Trigger zoom-to-extents button after species change
+                  setTimeout(() => {
+                    // console.log("Triggering zoom-to-extents after species change");
+                    // Find and click the zoom-to-extents button
+                    const zoomButtons = document.querySelectorAll('.leaflet-control-zoom-in');
+                    zoomButtons.forEach(btn => {
+                      if (btn.title === 'Fit to data' || btn.innerHTML.includes('rect')) {
+                        // console.log("Found zoom-to-extents button, clicking it");
+                        btn.click();
+                      }
+                    });
+                  }, 500); // Wait for map to update
+                  
+                  // Apply black borders to summary table after updates
+                  setTimeout(() => {
+                    const summaryTable = document.querySelector("#summaryTable");
+                    if (summaryTable) {
+                      summaryTable.style.border = "2px solid #000";
+                      summaryTable.style.borderCollapse = "collapse";
+                      summaryTable.style.borderSpacing = "0";
+                      
+                      const cells = summaryTable.querySelectorAll("th, td");
+                      cells.forEach(cell => {
+                        cell.style.border = "1px solid #000";
+                        cell.style.padding = "8px 12px";
+                      });
+                    }
+                  }, 200);
+                });
+                // console.log("Dynamic species listener added");
+              }
+
+              // Add dynamic checkbox listeners (maps and records only, no photos or summary table)
+              document.querySelectorAll(".bins-control input[type=checkbox], .grids-control input[type=checkbox]").forEach(box => {
+                const newBox = box.cloneNode(true);
+                box.parentNode.replaceChild(newBox, box);
+                
+                newBox.addEventListener("click", () => {
+                  // console.log("Checkbox toggled:", box.value, "- updating maps and records only");
+                  // Update only the maps and filtered records, not photos, D3 atlas, or summary table
+                  updateMap();
+                  drawFiltered();
+                  // Don't update carousel, D3 atlas, or summary table
+                });
+              });
+
+              // console.log("Dynamic checkbox listeners added - maps and records only, no photos, D3 atlas, or summary table");
+            }, 1500);
+
+          }
+
+        })
+
+        .catch(err => {
+
+          el.innerHTML = "<p style='color:red;'>Failed to load " + file + "</p>";
+
+          // console.error("Include error:", file, err);
+
+        });
+
+    });
+
+  });
+
+  </script>
+
+
+
+  <!-- ===== Your JS files (run AFTER components load) ===== -->
+
+  <script src="js/shared.js"></script>
+
+  <script src="js/leaflet.js"></script>
+
+  <script src="js/d3.js"></script>
+
+  <script src="js/photos.js"></script>
+
+  <script src="js/gallery.js"></script>
+
+  <!-- Simple working metadata script -->
+  <script>
+    setTimeout(() => {
+      // console.log("### Script starting - checking for elements...");
+      // console.log("### metadataLookup exists:", typeof metadataLookup !== 'undefined');
+      // console.log("### metadataLookup size:", metadataLookup ? metadataLookup.size : 'undefined');
+      
+      const dropdown = document.getElementById("latinSelect");
+      // console.log("### dropdown found:", !!dropdown);
+      
+      if (dropdown) {
+        // COMMENTED OUT - Duplicate event listener causing race conditions
+        // Using the one in shared.js instead
+        /*
+        dropdown.addEventListener("change", function() {
+          const species = this.value;
+          // console.log("### Species selected:", species);
+          
+          const meta = metadataLookup.get(species);
+          // console.log("### Metadata found:", !!meta);
+          
+          // Clear Records container IMMEDIATELY when new species is selected
+          const recordsContent = document.getElementById("records-content");
+          if (recordsContent) {
+            // console.log("### Clearing Records container for new species");
+            recordsContent.innerHTML = "";
+          }
+          
+          // Write WriteUp to Records container IMMEDIATELY when species is selected
+          if (meta && meta.WriteUp) {
+            // console.log("^^^^^^^^^^^^^^^^^^^ WriteUp:", meta.WriteUp);
+            
+            // console.log("### Records container found:", !!recordsContent);
+            
+            if (recordsContent) {
+              const writeUpText = meta.WriteUp;
+              // console.log("### Adding WriteUp to Records container:", writeUpText);
+              
+              // Insert WriteUp at the BEGINNING of container
+              recordsContent.innerHTML = `<div style="margin-left: 10px; font-size: 12px; color: #666;">${writeUpText}</div>`;
+              // console.log("### Records container HTML after WriteUp insert:", recordsContent.innerHTML);
+            } else {
+              // console.log("### Records container not found!");
+            }
+          } else {
+            // console.log("^^^^^^^^^^^^^^^^^^^ WriteUp: Not available");
+          }
+        });
+        // console.log("### Metadata listener attached successfully!");
+        */
+      } else {
+        // console.log("### Dropdown not found!");
+      }
+    }, 5000); // Wait 5 seconds for everything to load
+  </script>
+
+</body>
+
+<!-- ===== Initialization calls ===== -->
+<script>
+  // Global metadata lookup for English names
+  window.metadataLookup = new Map();
+  
+  // Load metadata for English names
+  fetch('metadata.csv')
+    .then(response => response.text())
+    .then(csvText => {
+      // Use Papa Parse for proper CSV parsing with commas
+      Papa.parse(csvText, {
+        header: true,
+        complete: function(results) {
+          results.data.forEach(row => {
+            metadataLookup.set(row.species, row);
+          });
+          // console.log('Metadata loaded for English names:', metadataLookup.size, 'entries');
+        },
+        error: function(error) {
+          // console.error('CSV parsing error:', error);
+        }
+      });
+    })
+    .catch(err => /* console.error('Failed to load metadata:', err) */ {});
+
+  // Component loader
+  function loadComponent(containerId, file) {
+    // TO DO: implement component loader
+  }
+
+  // Initialize all components after page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log("🚀 DOMContentLoaded event fired - Initializing all components");
+    initShared();
+    initLeaflet();
+    initD3();
+    initPhotos();
+    console.log("🚀 All initialization functions called");
+  });
+</script>
+
+</body>
+
+</html>
+
